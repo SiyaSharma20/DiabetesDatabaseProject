@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifestyle Data</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lifestyle Data</h1>
+    <table>
+        <tr>
+            <th>Row ID</th>
+            <th>Diabetes ID</th>
+            <th>Smoker</th>
+            <th>Phys Activity</th>
+            <th>Fruits</th>
+            <th>Veggies</th>
+            <th>High Alcohol Consumption</th>
+        </tr>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row.Row_ID }}</td>
+                <td>{{ row.Diabetes_ID }}</td>
+                <td>{{ row.Smoker }}</td>
+                <td>{{ row.PhysActivity }}</td>
+                <td>{{ row.Fruits }}</td>
+                <td>{{ row.Veggies }}</td>
+                <td>{{ row.HighAlcoholConsumption }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
