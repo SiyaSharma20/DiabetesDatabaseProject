@@ -7,7 +7,27 @@ import base64
 
 app = Flask(__name__)
 
-# Function to fetch data from MySQL
+# Function to fetch pie chart data (Query 3)
+def query_education_smoking():
+    db = mysql.connector.connect(
+        host="localhost",
+        port=3306,
+        user="root",
+        password="Arjun123!",
+        database="diabetes"
+    )
+    query = """
+    SELECT Demographics.Education, Lifestyle.Smoker, COUNT(*) AS Count
+    FROM Demographics
+    JOIN Lifestyle ON Demographics.Diabetes_ID = Lifestyle.Diabetes_ID
+    GROUP BY Demographics.Education, Lifestyle.Smoker
+    ORDER BY Demographics.Education, Lifestyle.Smoker;
+    """
+    result = pd.read_sql(query, db)
+    db.close()
+    return result
+
+# Function to fetch bar chart data (Query 5)
 def query_mental_health_by_age():
     db = mysql.connector.connect(
         host="localhost",
@@ -30,13 +50,56 @@ def query_mental_health_by_age():
     return result
 
 @app.route("/")
-def display_graph():
-    # Fetch data from the database
+def display_graphs():
+    # Fetch data for pie charts (Query 3)
+    education_smoking_data = query_education_smoking()
+
+    # Pivot the data
+    pivoted_data = education_smoking_data.pivot_table(
+        index="Education", 
+        columns="Smoker", 
+        values="Count", 
+        fill_value=0
+    )
+
+    # Generate pie charts and encode them as base64
+    charts = []
+    counts = []
+    for education_level, row in pivoted_data.iterrows():
+        labels = ["Non-Smoker", "Smoker"]
+        sizes = row.values
+        colors = ["#87CEEB", "#FFA500"]
+        plt.figure(figsize=(2.5, 2.5))
+        plt.pie(
+            sizes, 
+            labels=labels, 
+            autopct="%1.1f%%", 
+            startangle=140, 
+            colors=colors, 
+            textprops={'fontsize': 8}, 
+            wedgeprops={'edgecolor': 'white', 'linewidth': 1.2}
+        )
+        plt.title(f"Education Level {int(education_level)}", fontsize=10, pad=15)
+        buffer = io.BytesIO()
+        plt.tight_layout()
+        plt.savefig(buffer, format="png", dpi=150)
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        charts.append(image_base64)
+        plt.close()
+
+        counts.append({
+            "education_level": int(education_level),
+            "non_smoker_count": int(row[0]),
+            "smoker_count": int(row[1])
+        })
+
+    # Fetch data for bar chart (Query 5)
     mental_health_data = query_mental_health_by_age()
 
     # Generate the bar graph
     img = io.BytesIO()
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 4))
     plt.bar(
         mental_health_data["Age"],
         mental_health_data["Avg_Mental_Health_Score"],
@@ -51,11 +114,11 @@ def display_graph():
     plt.tight_layout()
     plt.savefig(img, format='png')
     img.seek(0)
-    graph_url = base64.b64encode(img.getvalue()).decode('utf8')
+    bar_chart_url = base64.b64encode(img.getvalue()).decode('utf8')
     plt.close()
 
-    # Render the graph on the webpage
-    return render_template("graph.html", graph_url=graph_url)
+    # Render both visualizations on the webpage
+    return render_template("graphs.html", charts=charts, counts=counts, zip=zip, bar_chart_url=bar_chart_url)
 
 if __name__ == "__main__":
     app.run(debug=True)
