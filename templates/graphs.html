@@ -11,11 +11,8 @@
             padding: 0;
             text-align: center;
         }
-        h1 {
+        h1, h2 {
             margin-top: 20px;
-        }
-        h2 {
-            margin-top: 30px;
         }
         .chart-container {
             display: flex;
@@ -38,29 +35,32 @@
             margin-top: 10px;
             font-size: 14px;
         }
-        p1 {
-            display: block;
-            margin-top: 5px;
-            font-size: 12px;
-            color: #333;
-        }
     </style>
 </head>
 <body>
     <h1>Diabetes Data Visualizations</h1>
 
-    <h2>Querry 3: Proportion of Smokers vs Non-Smokers by Education Level</h2>
+    <h2>Query 3: Proportion of Smokers vs Non-Smokers by Education Level</h2>
     <div class="chart-container">
         {% for chart, count in zip(charts, counts) %}
         <div class="chart">
             <img src="data:image/png;base64, {{ chart }}" alt="Pie Chart">
             <div class="chart-title">Education Level {{ count.education_level }}</div>
-            <p1>Non-Smokers: {{ count.non_smoker_count }}, Smokers: {{ count.smoker_count }}</p1>
+            <p>Non-Smokers: {{ count.non_smoker_count }}, Smokers: {{ count.smoker_count }}</p>
         </div>
         {% endfor %}
     </div>
 
-    <h2>Querry 5: Average Mental Health Scores by Age</h2>
-    <img src="data:image/png;base64, {{ bar_chart_url }}" alt="Bar Chart">
+    <h2>Query 4: Impact of Income on Healthcare Access</h2>
+    <div style="text-align: center;">
+        <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income vs Healthcare Access" style="width: 50%; height: auto;">
+    </div>
+
+    <h2>Query 5: Average Mental Health Scores by Age</h2>
+    <div style="text-align: center;">
+        <img src="data:image/png;base64, {{ bar_chart_url }}" alt="Mental Health Scores by Age" style="width: 50%; height: auto;">
+    </div>
+
+    
 </body>
 </html>

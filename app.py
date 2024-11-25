@@ -7,7 +7,7 @@ import base64
 
 app = Flask(__name__)
 
-# Function to fetch pie chart data (Query 3)
+# Query 3: Data for Pie Charts (Smokers vs Non-Smokers by Education)
 def query_education_smoking():
     db = mysql.connector.connect(
         host="localhost",
@@ -27,7 +27,28 @@ def query_education_smoking():
     db.close()
     return result
 
-# Function to fetch bar chart data (Query 5)
+# Query 4: Impact of Income on Healthcare Access using "NoDoctor"
+def query_income_healthcare_access():
+    db = mysql.connector.connect(
+        host="localhost",
+        port=3306,
+        user="root",
+        password="Arjun123!",
+        database="diabetes"
+    )
+    query = """
+    SELECT Demographics.Income, AVG(Medical_and_Wellbeing.NoDoctor) AS Avg_No_Doctor
+    FROM Demographics
+    JOIN Medical_and_Wellbeing ON Demographics.Diabetes_ID = Medical_and_Wellbeing.Diabetes_ID
+    GROUP BY Demographics.Income
+    ORDER BY Demographics.Income;
+    """
+    result = pd.read_sql(query, db)
+    db.close()
+    return result
+
+
+# Query 5: Mental Health Scores by Age
 def query_mental_health_by_age():
     db = mysql.connector.connect(
         host="localhost",
@@ -51,18 +72,14 @@ def query_mental_health_by_age():
 
 @app.route("/")
 def display_graphs():
-    # Fetch data for pie charts (Query 3)
+    # Query 3: Pie Charts (Education vs Smoking)
     education_smoking_data = query_education_smoking()
-
-    # Pivot the data
     pivoted_data = education_smoking_data.pivot_table(
         index="Education", 
         columns="Smoker", 
         values="Count", 
         fill_value=0
     )
-
-    # Generate pie charts and encode them as base64
     charts = []
     counts = []
     for education_level, row in pivoted_data.iterrows():
@@ -94,31 +111,92 @@ def display_graphs():
             "smoker_count": int(row[1])
         })
 
-    # Fetch data for bar chart (Query 5)
-    mental_health_data = query_mental_health_by_age()
+    # Query 4: Bar Chart (Income vs NoDoctor)
+    income_healthcare_data = query_income_healthcare_access()
 
-    # Generate the bar graph
-    img = io.BytesIO()
-    plt.figure(figsize=(8, 4))
-    plt.bar(
-        mental_health_data["Age"],
-        mental_health_data["Avg_Mental_Health_Score"],
-        color="skyblue",
+    img_income = io.BytesIO()
+    plt.figure(figsize=(6, 3))
+    bars = plt.bar(
+        income_healthcare_data["Income"],
+        income_healthcare_data["Avg_No_Doctor"],
+        color="coral",
         edgecolor="black"
     )
-    plt.title("Average Mental Health Scores by Age (Diabetic Patients)", fontsize=16)
-    plt.xlabel("Age", fontsize=12)
-    plt.ylabel("Average Mental Health Score", fontsize=12)
-    plt.xticks(mental_health_data["Age"], rotation=45, fontsize=10)
-    plt.grid(axis="y", linestyle='--', alpha=0.7)
+
+   # Add values to the bars dynamically
+    for bar in bars:
+        height = bar.get_height()
+        if height < 0.2:  # Place above if the bar is tall enough
+            plt.text(
+                bar.get_x() + bar.get_width() / 2,
+                height + 0.005,
+                f"{height:.2f}",
+                ha="center", va="bottom", fontsize=8
+            )
+        else:  # Place inside the bar if it's too short
+            plt.text(
+                bar.get_x() + bar.get_width() / 2,
+                height - 0.005,
+                f"{height:.2f}",
+                ha="center", va="top", fontsize=8
+            )
+
+    plt.title("Impact of Income on Healthcare Access", fontsize=12)
+    plt.xlabel("Income Levels", fontsize=10)
+    plt.ylabel("Average 'NoDoctor' Count", fontsize=10)
+    plt.xticks(income_healthcare_data["Income"], rotation=45, fontsize=8)
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
     plt.tight_layout()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    bar_chart_url = base64.b64encode(img.getvalue()).decode('utf8')
+    plt.savefig(img_income, format="png")
+    img_income.seek(0)
+    income_chart_url = base64.b64encode(img_income.getvalue()).decode("utf8")
     plt.close()
 
-    # Render both visualizations on the webpage
-    return render_template("graphs.html", charts=charts, counts=counts, zip=zip, bar_chart_url=bar_chart_url)
+
+
+    # Query 5: Bar Chart (Mental Health Scores by Age)
+    mental_health_data = query_mental_health_by_age()
+
+    img_mental = io.BytesIO()
+    plt.figure(figsize=(6, 3))
+    bars = plt.bar(
+        mental_health_data["Age"],
+        mental_health_data["Avg_Mental_Health_Score"],
+        color="#5DADE2",
+        edgecolor="black"
+    )
+
+    # Add values to the bars dynamically
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height - 0.1,
+            f"{height:.2f}",
+            ha="center", va="top", fontsize=8, color="black"
+        )
+
+    plt.title("Average Mental Health Scores by Age", fontsize=12)
+    plt.xlabel("Age", fontsize=10)
+    plt.ylabel("Average Mental Health Score", fontsize=10)
+    plt.xticks(mental_health_data["Age"], rotation=45, fontsize=8)
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(img_mental, format="png")
+    img_mental.seek(0)
+    mental_health_chart_url = base64.b64encode(img_mental.getvalue()).decode("utf8")
+    plt.close()
+
+
+    # Render all visualizations
+    return render_template(
+        "graphs.html",
+        charts=charts,
+        counts=counts,
+        zip=zip,
+        bar_chart_url=mental_health_chart_url,
+        income_chart_url=income_chart_url
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
