@@ -7,13 +7,34 @@ import base64
 
 app = Flask(__name__)
 
+# Query 2: Percentage of individuals with diabetes who engage in regular physical activity
+def query_physical_activity_percentage():
+    db = mysql.connector.connect(
+        host="localhost",
+        port=3306,
+        user="root",
+        password="SiyaSharma1!",
+        database="diabetes"
+    )
+    query = """
+    SELECT 
+        (SUM(CASE WHEN Lifestyle.PhysActivity = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS PhysActivityPercentage
+    FROM Diabetes_Status
+    JOIN Lifestyle ON Diabetes_Status.Diabetes_ID = Lifestyle.Diabetes_ID
+    WHERE Diabetes_Status.Status = 2;
+    """
+    result = pd.read_sql(query, db)
+    db.close()
+    return result["PhysActivityPercentage"].iloc[0]
+
+
 # Query 3: Data for Pie Charts (Smokers vs Non-Smokers by Education)
 def query_education_smoking():
     db = mysql.connector.connect(
         host="localhost",
         port=3306,
         user="root",
-        password="Arjun123!",
+        password="SiyaSharma1!",
         database="diabetes"
     )
     query = """
@@ -33,7 +54,7 @@ def query_income_healthcare_access():
         host="localhost",
         port=3306,
         user="root",
-        password="Arjun123!",
+        password="SiyaSharma1!",
         database="diabetes"
     )
     query = """
@@ -54,7 +75,7 @@ def query_mental_health_by_age():
         host="localhost",
         port=3306,
         user="root",
-        password="Arjun123!",
+        password="SiyaSharma1!",
         database="diabetes"
     )
     query = """
@@ -72,6 +93,10 @@ def query_mental_health_by_age():
 
 @app.route("/")
 def display_graphs():
+    
+     #Query 2: percentage of physical activity
+    physical_activity_percentage = query_physical_activity_percentage()
+   
     # Query 3: Pie Charts (Education vs Smoking)
     education_smoking_data = query_education_smoking()
     pivoted_data = education_smoking_data.pivot_table(
@@ -195,7 +220,9 @@ def display_graphs():
         counts=counts,
         zip=zip,
         bar_chart_url=mental_health_chart_url,
-        income_chart_url=income_chart_url
+        income_chart_url=income_chart_url,
+        physical_activity_percentage=round(physical_activity_percentage, 2)
+
     )
 
 if __name__ == "__main__":

@@ -40,6 +40,11 @@
 <body>
     <h1>Diabetes Data Visualizations</h1>
 
+    <h2> Query 2: Percentage of Diabetic Individuals Engaging in Regular Physical Activity</h2>
+    <p>The percentage of individuals with diabetes who engage in regular physical activity is: 
+   <strong>{{ physical_activity_percentage }}%</strong>
+    </p>
+
     <h2>Query 3: Proportion of Smokers vs Non-Smokers by Education Level</h2>
     <div class="chart-container">
         {% for chart, count in zip(charts, counts) %}
