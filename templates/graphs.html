@@ -40,6 +40,18 @@
 <body>
     <h1>Diabetes Data Visualizations</h1>
 
+    <div class="filter-container">
+        <form method="POST">
+            <label for="sex_filter">Filter by Gender:</label>
+            <select name="sex_filter" id="sex_filter">
+                <option value="" {% if not sex_filter %}selected{% endif %}>All</option>
+                <option value="Male" {% if sex_filter == "Male" %}selected{% endif %}>Male</option>
+                <option value="Female" {% if sex_filter == "Female" %}selected{% endif %}>Female</option>
+            </select>
+            <button type="submit">Apply Filter</button>
+        </form>
+    </div>
+
 
     <h2>Query 1: Average BMI of Individuals with High Cholesterol and Heart Attack or Stroke</h2>
     <p>
@@ -70,15 +82,13 @@
     </div>
 
     <h2>Query 4: Impact of Income on Healthcare Access</h2>
-    <div style="text-align: center;">
-        <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income vs Healthcare Access" style="width: 50%; height: auto;">
+    <div>
+        <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income vs Healthcare Access">
     </div>
 
     <h2>Query 5: Average Mental Health Scores by Age</h2>
-    <div style="text-align: center;">
-        <img src="data:image/png;base64, {{ bar_chart_url }}" alt="Mental Health Scores by Age" style="width: 50%; height: auto;">
+    <div>
+        <img src="data:image/png;base64, {{ mental_chart_url }}" alt="Mental Health Scores by Age">
     </div>
-
-    
 </body>
 </html>
