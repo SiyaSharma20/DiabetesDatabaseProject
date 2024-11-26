@@ -118,16 +118,31 @@ def display_graphs():
         labels = ["Non-Smoker", "Smoker"]
         sizes = row.values
         colors = ["#87CEEB", "#FFA500"]
-        plt.figure(figsize=(2.5, 2.5))
-        plt.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=140, colors=colors)
-        plt.title(f"Education Level {int(education_level)}", fontsize=10)
+        explode = (0.05, 0)  # Slightly offset the first slice for emphasis
+        plt.figure(figsize=(2, 2))  # Ensure consistent chart size
+        plt.pie(
+            sizes,
+            labels=labels,
+            autopct="%1.1f%%",
+            startangle=140,
+            colors=colors,
+            explode=explode,
+            textprops={"fontsize": 5},
+            wedgeprops={"edgecolor": "white", "linewidth": 0.3},
+        )
+        #plt.title(f"Education Level {int(education_level)}", fontsize=6, pad=5, loc='center')
         buffer = io.BytesIO()
         plt.tight_layout()
-        plt.savefig(buffer, format="png")
+        plt.savefig(buffer, format="png", dpi=150)
         buffer.seek(0)
         charts.append(base64.b64encode(buffer.getvalue()).decode("utf-8"))
         plt.close()
-        counts.append({"education_level": int(education_level), "non_smoker_count": int(row[0]), "smoker_count": int(row[1])})
+        counts.append({
+            "education_level": int(education_level),
+            "non_smoker_count": int(row[0]),
+            "smoker_count": int(row[1]),
+        })
+
 
     # Query 4: Income vs Healthcare Access
     query_income_healthcare_access = f"""
@@ -167,7 +182,7 @@ def display_graphs():
     plt.figure(figsize=(6, 3))
     bars = plt.bar(mental_health_data["Age"], mental_health_data["Avg_Mental_Health_Score"], color="#5DADE2")
     for bar in bars:
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.1, f"{bar.get_height():.2f}", ha="center")
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.5, f"{bar.get_height():.2f}", ha="center")
     plt.title("Average Mental Health Scores by Age")
     plt.tight_layout()
     plt.savefig(img_mental, format="png")
