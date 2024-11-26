@@ -7,6 +7,36 @@ import base64
 
 app = Flask(__name__)
 
+
+#Query 1
+def query_average_bmi():
+    try:
+        db = mysql.connector.connect(
+            host="localhost",
+            port=3306,
+            user="root",
+            password="SiyaSharma1!",
+            database="diabetes"
+        )
+        query = """
+        SELECT AVG(Health_Status.BMI) AS Average_BMI
+        FROM Health_Status
+        JOIN Medical_and_Wellbeing ON Health_Status.Diabetes_ID = Medical_and_Wellbeing.Diabetes_ID
+        WHERE Health_Status.HighChol = 1 
+          AND (Medical_and_Wellbeing.HeartDisease = 1 OR Medical_and_Wellbeing.Stroke = 1);
+        """
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(query)
+        result = cursor.fetchone()
+        db.close()
+
+        # Return the average BMI
+        return result['Average_BMI'] if result else None
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+
 # Query 2: Percentage of individuals with diabetes who engage in regular physical activity
 def query_physical_activity_percentage():
     db = mysql.connector.connect(
@@ -94,6 +124,14 @@ def query_mental_health_by_age():
 @app.route("/")
 def display_graphs():
     
+    #Query 1: 
+    average_bmi = query_average_bmi()
+    if average_bmi is None:
+        average_bmi = "No data available"
+    else:
+        average_bmi = round(average_bmi, 2)
+
+
      #Query 2: percentage of physical activity
     physical_activity_percentage = query_physical_activity_percentage()
    
@@ -221,7 +259,9 @@ def display_graphs():
         zip=zip,
         bar_chart_url=mental_health_chart_url,
         income_chart_url=income_chart_url,
-        physical_activity_percentage=round(physical_activity_percentage, 2)
+        physical_activity_percentage=round(physical_activity_percentage, 2),
+        average_bmi=average_bmi
+
 
     )
 

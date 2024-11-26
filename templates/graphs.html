@@ -40,6 +40,19 @@
 <body>
     <h1>Diabetes Data Visualizations</h1>
 
+
+    <h2>Query 1: Average BMI of Individuals with High Cholesterol and Heart Attack or Stroke</h2>
+    <p>
+        {% if average_bmi != "No data available" %}
+            The average BMI of individuals with high cholesterol who have also suffered a heart attack or stroke is:
+            <strong>{{ average_bmi }}</strong>
+        {% else %}
+            <strong>{{ average_bmi }}</strong>
+        {% endif %}
+    </p>
+
+
+
     <h2> Query 2: Percentage of Diabetic Individuals Engaging in Regular Physical Activity</h2>
     <p>The percentage of individuals with diabetes who engage in regular physical activity is: 
    <strong>{{ physical_activity_percentage }}%</strong>
