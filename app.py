@@ -49,7 +49,8 @@ def query_physical_activity_percentage(gender_condition):
             password="Arjun123!",
             database="diabetes"
         )
-        query = f"""
+        # Query for overall percentage
+        overall_query = f"""
         SELECT 
             (SUM(CASE WHEN Lifestyle.PhysActivity = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS PhysActivityPercentage
         FROM Diabetes_Status
@@ -58,12 +59,27 @@ def query_physical_activity_percentage(gender_condition):
         WHERE Diabetes_Status.Status = 2
         {gender_condition};
         """
-        result = pd.read_sql(query, db)
+        overall_result = pd.read_sql(overall_query, db)["PhysActivityPercentage"].iloc[0]
+
+        # Query for percentage by age group
+        age_group_query = f"""
+        SELECT Demographics.Age, 
+               (SUM(CASE WHEN Lifestyle.PhysActivity = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS PhysActivityPercentage
+        FROM Diabetes_Status
+        JOIN Lifestyle ON Diabetes_Status.Diabetes_ID = Lifestyle.Diabetes_ID
+        JOIN Demographics ON Diabetes_Status.Diabetes_ID = Demographics.Diabetes_ID
+        WHERE Diabetes_Status.Status = 2
+        {gender_condition}
+        GROUP BY Demographics.Age
+        ORDER BY Demographics.Age;
+        """
+        age_group_result = pd.read_sql(age_group_query, db)
         db.close()
-        return result["PhysActivityPercentage"].iloc[0]
+
+        return overall_result, age_group_result
     except mysql.connector.Error as err:
         print(f"Error: {err}")
-        return None
+        return None, None
 
 # General Utility Function
 def fetch_filtered_data(query):
@@ -96,9 +112,46 @@ def display_graphs():
     average_bmi = query_average_bmi(gender_condition)
     average_bmi = round(average_bmi, 2) if average_bmi else "No data available"
 
+    
+
     # Query 2: Physical Activity Percentage
-    physical_activity_percentage = query_physical_activity_percentage(gender_condition)
+    physical_activity_percentage, age_group_data = query_physical_activity_percentage(gender_condition)
     physical_activity_percentage = round(physical_activity_percentage, 2) if physical_activity_percentage else "No data available"
+
+    # Age group labels based on the new table
+    age_labels = [
+        "18-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59",
+        "60-64", "65-69", "70-74", "75-79", "80+"
+    ]
+
+    # Generate bar plot for physical activity percentage by age group
+    img_physical_activity = io.BytesIO()
+    plt.figure(figsize=(8, 4))
+    if age_group_data is not None and not age_group_data.empty:
+        bars = plt.bar(age_labels, age_group_data["PhysActivityPercentage"], color="#76C7C0")
+        plt.xticks(rotation=45, ha='right', fontsize=12)
+        plt.xlabel("Age Group", fontsize=15)
+        plt.ylabel("Physical Activity Percentage", fontsize=15)
+        plt.title("Physical Activity Percentage by Age Group", fontsize=12)
+        
+        # Add numbers inside each bar
+        for bar, value in zip(bars, age_group_data["PhysActivityPercentage"]):
+            plt.text(
+                bar.get_x() + bar.get_width() / 2,  # X position (center of the bar)
+                bar.get_height() / 2,  # Y position (middle of the bar)
+                f"{value:.1f}%",  # Label text
+                ha='center', va='center', rotation=90, fontsize=15, color="black"  # Center alignment and white color for contrast
+            )
+        
+        plt.tight_layout()
+    else:
+        plt.text(0.5, 0.5, "No data available", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
+    plt.savefig(img_physical_activity, format="png")
+    img_physical_activity.seek(0)
+    physical_activity_chart_url = base64.b64encode(img_physical_activity.getvalue()).decode("utf-8")
+    plt.close()
+
+
 
     # Query 3: Education vs Smoking (Pie Chart)
     query_education_smoking = f"""
@@ -180,7 +233,10 @@ def display_graphs():
 
     img_mental = io.BytesIO()
     plt.figure(figsize=(6, 3))
-    bars = plt.bar(mental_health_data["Age"], mental_health_data["Avg_Mental_Health_Score"], color="#5DADE2")
+    bars = plt.bar(age_labels, mental_health_data["Avg_Mental_Health_Score"], color="#5DADE2")
+    plt.xlabel("Age Group", fontsize=15)
+    plt.ylabel("Days",fontsize=15)
+    plt.xticks(rotation=45, ha='right', fontsize=12)
     for bar in bars:
         plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.5, f"{bar.get_height():.2f}", ha="center")
     plt.title("Average Mental Health Scores by Age")
@@ -198,6 +254,7 @@ def display_graphs():
         counts=counts,
         income_chart_url=income_chart_url,
         mental_chart_url=mental_chart_url,
+        physical_activity_chart_url=physical_activity_chart_url,
         zip=zip,
         sex_filter=sex_filter
     )
