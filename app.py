@@ -7,6 +7,7 @@ import base64
 import matplotlib
 import plotly.graph_objects as go
 import math
+from matplotlib.ticker import FuncFormatter
 
 
 # Use a non-GUI backend for Matplotlib
@@ -181,6 +182,15 @@ def display_graphs():
     education_smoking_data = fetch_filtered_data(query_education_smoking)
     pivoted_data = education_smoking_data.pivot_table(index="Education", columns="Smoker", values="Count", fill_value=0)
 
+    EDUCATION_LEVELS = {
+    1: "No Schooling",
+    2: "Grades 1-8",
+    3: "Grades 9-11",
+    4: "High School Graduate",
+    5: "Some College",
+    6: "College Graduate"
+}
+
     charts = []
     counts = []
     for education_level, row in pivoted_data.iterrows():
@@ -206,14 +216,26 @@ def display_graphs():
         buffer.seek(0)
         charts.append(base64.b64encode(buffer.getvalue()).decode("utf-8"))
         plt.close()
+
         counts.append({
-            "education_level": int(education_level),
+            "education_level": EDUCATION_LEVELS.get(int(education_level), "Unknown"),
             "non_smoker_count": int(row[0]),
             "smoker_count": int(row[1]),
         })
 
 
     # Query 4: Income vs Healthcare Access
+    INCOME_LEVELS = {
+    1: "< 10K",
+    2: "10K-15K",
+    3: "15K-20K",
+    4: "20K-25K",
+    5: "25K-35K",
+    6: "35K-50K",
+    7: "50K-75K",
+    8: "75K+"
+    }
+    
     query_income_healthcare_access = f"""
     SELECT Demographics.Income, AVG(Medical_and_Wellbeing.NoDoctor) AS Avg_No_Doctor
     FROM Demographics
@@ -226,9 +248,30 @@ def display_graphs():
 
     img_income = io.BytesIO()
     plt.figure(figsize=(6, 3))
-    bars = plt.bar(income_healthcare_data["Income"], income_healthcare_data["Avg_No_Doctor"], color="coral")
+    
+    # Replace integer income levels with descriptive labels for plotting
+    income_labels = [INCOME_LEVELS.get(income, "Unknown") for income in income_healthcare_data["Income"]]
+
+    # Convert the average values to percentages by multiplying by 100
+    income_healthcare_data["Avg_No_Doctor"] *= 100  
+    bars = plt.bar(income_labels, income_healthcare_data["Avg_No_Doctor"], color="coral")
     for bar in bars:
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.02, f"{bar.get_height():.2f}", ha="center")
+        value = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + 0.1,  # Position slightly above the bar
+            f"{value:.2f}%",
+            ha="center",
+            fontsize=9
+        )
+
+    # Add % sign to the Y-axis
+    def to_percent(y, _):
+        return f"{y:.0f}%"
+
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(to_percent))
+
+    plt.xticks(rotation=45, ha='right', fontsize=10)
     plt.title("Impact of Income on Healthcare Access")
     plt.tight_layout()
     plt.savefig(img_income, format="png")

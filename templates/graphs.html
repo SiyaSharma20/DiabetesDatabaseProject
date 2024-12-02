@@ -185,8 +185,8 @@
         <div class="chart-container">
             <h2>Query 4: Income vs Healthcare Access</h2>
             <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income Chart">
-            <p>'NoDoctor' = Was there a time in the past 12 months when you needed to see a doctor but could not due to cost? (0 = No, 1 = Yes).</p>
-            <div class="chart-label">X-axis: Income Levels | Y-axis: Average 'NoDoctor' Count</div>
+            <p>'NoDoctor' = Percent of people who had a time in the past 12 months where they needed to see a doctor but could not due to cost? (0 = No, 1 = Yes).</p>
+            <div class="chart-label">X-axis: Income Levels | Y-axis: Percentage of 'NoDoctor'</div>
         </div>
 
         <div class="chart-container">
@@ -202,7 +202,7 @@
             <div class="query-3-grid">
                 {% for chart, count in zip(charts, counts) %}
                 <div class="query-3-card">
-                    <h3>Education Level {{ count.education_level }}</h3>
+                    <h3>{{ count.education_level }}</h3>
                     <img src="data:image/png;base64, {{ chart }}" alt="Education Smoking Chart">
                     <p>Non-Smokers: {{ count.non_smoker_count }}, Smokers: {{ count.smoker_count }}</p>
                 </div>
