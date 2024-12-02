@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import matplotlib
+import plotly.graph_objects as go
+import math
+
 
 # Use a non-GUI backend for Matplotlib
 matplotlib.use("Agg")
@@ -18,7 +21,7 @@ def query_average_bmi(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         query = f"""
@@ -46,7 +49,7 @@ def query_physical_activity_percentage(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         query = f"""
@@ -72,7 +75,7 @@ def fetch_filtered_data(query):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         result = pd.read_sql(query, db)
@@ -81,6 +84,69 @@ def fetch_filtered_data(query):
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
+
+
+def generate_bmi_gauge(average_bmi):
+    if average_bmi is None:
+        return None
+
+    # Determine the BMI category based on the value
+    if average_bmi < 18.5:
+        category = "Underweight"
+    elif 18.5 <= average_bmi <= 24.9:
+        category = "Healthy"
+    elif 25 <= average_bmi <= 29.9:
+        category = "Overweight"
+    else:
+        category = "Obese"
+
+    # Create the gauge chart
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=average_bmi,
+        number={ "font": {"size": 80},
+        "valueformat" : ".2f",
+        },  # Large font for BMI value
+        title={"text": "Average BMI", "font": {"size": 24}},
+        gauge={
+            "axis": {"range": [10, 40], "tickwidth": 1, "tickcolor": "black"},
+            "bar": {"color": "#FF6347"},
+            "steps": [
+                {"range": [10, 18.5], "color": "#ADD8E6"},  # Underweight
+                {"range": [18.5, 24.9], "color": "#90EE90"},  # Healthy
+                {"range": [25, 29.9], "color": "#FFD700"},  # Overweight
+                {"range": [30, 40], "color": "#FF4500"},  # Obese
+            ],
+            "threshold": {
+                "line": {"color": "red", "width": 4},
+                "thickness": 0.75,
+                "value": average_bmi,
+            },
+        }
+    ))
+
+    # Add text below the gauge, centered in the middle
+    fig.add_annotation(
+        text=f"<b>{category}</b>",  # Dynamic text (e.g., "Overweight")
+        x=0.5,  # Center horizontally
+        y=-0.05,  # Position below the gauge
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(size=24, color="gray"),  # Customize font size and color
+        align="center"
+    )
+
+    # Save the chart as a PNG image in memory
+    img_bmi = io.BytesIO()
+    fig.write_image(img_bmi, format="png", engine="kaleido")
+    img_bmi.seek(0)
+
+    # Encode the image in base64
+    return base64.b64encode(img_bmi.getvalue()).decode("utf-8")
+    #new stuff ends here
+
+
 
 @app.route("/", methods=["GET", "POST"])
 def display_graphs():
@@ -95,6 +161,9 @@ def display_graphs():
     # Query 1: Average BMI
     average_bmi = query_average_bmi(gender_condition)
     average_bmi = round(average_bmi, 2) if average_bmi else "No data available"
+    #new for query 1 gauge chart
+    bmi_gauge_chart_url = generate_bmi_gauge(average_bmi) if average_bmi else None
+
 
     # Query 2: Physical Activity Percentage
     physical_activity_percentage = query_physical_activity_percentage(gender_condition)
@@ -199,7 +268,9 @@ def display_graphs():
         income_chart_url=income_chart_url,
         mental_chart_url=mental_chart_url,
         zip=zip,
-        sex_filter=sex_filter
+        sex_filter=sex_filter,
+        bmi_gauge_chart_url=bmi_gauge_chart_url,
+
     )
 
 if __name__ == "__main__":
