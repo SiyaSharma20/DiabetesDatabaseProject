@@ -118,10 +118,13 @@ def fetch_filtered_data(query, gender_condition=""):
 
     
 # Render Bar Plot for Queries
-def generate_bar_plot(data, x_col, y_col, title, xlabel, ylabel, color, rotation=45):
+def generate_bar_plot(data, x_col, y_col, title, xlabel, ylabel, color, rotation=45, multiply_y_by_100=False):
     img = io.BytesIO()
     plt.figure(figsize=(8, 4))
-    bars = plt.bar(data[x_col], data[y_col], color=color)
+
+    # Apply multiplier for specific cases
+    y_values = data[y_col] * 100 if multiply_y_by_100 else data[y_col]
+    bars = plt.bar(data[x_col], y_values, color=color)
     plt.xlabel(xlabel, fontsize=12)
     plt.ylabel(ylabel, fontsize=12)
     plt.title(title, fontsize=14)
@@ -317,7 +320,8 @@ def display_graphs():
     healthcare_access_data = fetch_filtered_data(healthcare_access_query, gender_condition)
     healthcare_access_chart = generate_bar_plot(
         healthcare_access_data, "DiabetesStatus", "AvgNoDoctorAccess",
-        "Healthcare Access vs Diabetes Status", "Diabetes Status", "Average Unable to See Doctor", "#FFA07A"
+        "Healthcare Access vs Diabetes Status", "Diabetes Status", "Average Unable to See Doctor", "#FFA07A",
+        multiply_y_by_100 = True 
     )
 
     # Query 8: Mental Health vs Diabetes Status
