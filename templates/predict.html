@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict Your Diabetes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 98%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center; /* Center-align the button */
+            margin-top: 20px;
+        }
+
+        .btn {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+             
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        .back-button {
+            
+            display: inline-block;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+        .form-title {
+            font-size: 26px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none; /* Hidden by default */
+        }
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="header">
+        <h1>Predict Your Diabetes</h1>
+        <a href="{{ url_for('dashboard') }}" class="back-button">Back to Dashboard</a>
+    </div>
+    <div class="container">
+        <div class="form-title">Add Your Health Information</div>
+        <form method="POST">
+            {% for field, label in form_fields.items() %}
+            <div class="form-group">
+                <label for="{{ field }}">{{ label }}</label>
+                <input 
+                type="number" 
+                name="{{ field }}" 
+                id="{{ field }}" 
+                required 
+                {% if field == "Age" %}type="number"{% else %}type="text"{% endif %}>
+
+            </div>
+            {% endfor %}        
+            <div class="button-container">
+                <button type="submit" class="btn">Predict</button>
+            </div>
+        </form>
+        {% if prediction %}
+        <div class="result">
+            <strong>Your Prediction Result:</strong> {{ prediction }}
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        const form = document.getElementById("predictForm");
+        const loader = document.getElementById("loader");
+
+        form.addEventListener("submit", function () {
+            loader.style.display = "flex"; // Show the loader
+        });
+
+        window.addEventListener("load", function () {
+            loader.style.display = "none"; // Hide the loader after page loads
+        });
+    </script>
+
+</body>
+</html>
