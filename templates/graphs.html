@@ -143,6 +143,18 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .predict-button {
+        background-color: #007BFF;
+        color: white;
+        padding: 5px 10px;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-left: 10px;
+        font-size: 14px;
+    }
+    .predict-button:hover {
+        background-color: #0056b3;
+    }
 
     </style>
 </head>
@@ -162,6 +174,7 @@
                     <option value="Female" {% if sex_filter=="Female" %}selected{% endif %}>Female</option>
                 </select>
                 <button type="submit">Apply</button>
+                <a href="{{ url_for('predict') }}" class="predict-button">Predict your diabetes</a>
             </form>
         </div>
     </div>
@@ -184,7 +197,7 @@
         <div class="chart-container">
             <h2>Query 4: Income vs Healthcare Access</h2>
             <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income Chart">
-            <div class="chart-label">X-axis: Income Levels | Y-axis: Proportion of Individuals Unable to Afford Doctor Visits</div>
+            <div class="chart-label">X-axis: Income Levels | Y-axis: Proportion of individuals unable to afford a doctor visit in the past 12 months </div>
         </div>
 
         <div class="chart-container">

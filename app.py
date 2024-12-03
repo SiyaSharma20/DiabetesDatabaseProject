@@ -8,12 +8,80 @@ import matplotlib
 import plotly.graph_objects as go
 import math
 from matplotlib.ticker import FuncFormatter
+import statsmodels.api as sm
+import numpy as np
 
 
 # Use a non-GUI backend for Matplotlib
 matplotlib.use("Agg")
 
 app = Flask(__name__)
+
+# Database connection function
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="SiyaSharma1!",
+        database="diabetes"
+    )
+
+# Query data for the prediction model
+def fetch_data_for_model():
+    try:
+        db = get_db_connection()
+        
+        query = """
+        SELECT 
+            HighBP, HighChol, CholCheck, BMI, Smoker, Stroke,
+            HeartDisease AS HeartDiseaseorAttack, PhysActivity, Fruits, Veggies,
+            HighAlcoholConsumption AS HvyAlcoholConsump, 
+            NoDoctor AS NoDocbcCost, GenHlth,
+            MentHlth, PhysHlth, DiffWalk, Sex, Age, Education, Income, Status AS Diabetes_012
+        FROM Health_Status
+        JOIN Medical_and_Wellbeing ON Health_Status.Diabetes_ID = Medical_and_Wellbeing.Diabetes_ID
+        JOIN Lifestyle ON Health_Status.Diabetes_ID = Lifestyle.Diabetes_ID
+        JOIN Demographics ON Health_Status.Diabetes_ID = Demographics.Diabetes_ID
+        JOIN Diabetes_Status ON Health_Status.Diabetes_ID = Diabetes_Status.Diabetes_ID
+        """
+        data = pd.read_sql(query, db)
+        db.close()
+        return data
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+# Train the model once at the start of the application
+try:
+    diabetes_data = fetch_data_for_model()
+    if diabetes_data is None or diabetes_data.empty:
+        raise ValueError("Unable to fetch data from the database or database is empty.")
+    X = diabetes_data.drop(columns=["Diabetes_012"])
+    y = diabetes_data["Diabetes_012"]
+    X_const = sm.add_constant(X)
+    model = sm.MNLogit(y, X_const).fit()
+except Exception as e:
+    print(f"Error while training the model: {e}")
+    model = None
+
+# Predict the diabetes outcome
+def predict_diabetes(user_input):
+    if model is None:
+        return "Model is not available. Please check the database connection or training process."
+
+    # Prepare user input
+    user_input_df = pd.DataFrame([user_input])
+    user_input_const = sm.add_constant(user_input_df, has_constant='add')
+    
+    # Predict probabilities
+    predicted_probabilities = model.predict(user_input_const)
+    
+    # Classify the prediction
+    predicted_class = np.argmax(predicted_probabilities.values[0])
+    return ["No Diabetes", "Pre-Diabetes", "Diabetes"][predicted_class]
+
+
+
 
 # Query 1: Average BMI
 def query_average_bmi(gender_condition):
@@ -370,6 +438,49 @@ def display_graphs():
         bmi_gauge_chart_url=bmi_gauge_chart_url,
 
     )
+
+@app.route("/")
+def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/predict", methods=["GET", "POST"])
+def predict():
+    # Define the form fields and their labels
+    form_fields = {
+        "HighBP": "High Blood Pressure (0 = No, 1 = Yes)",
+        "HighChol": "High Cholesterol (0 = No, 1 = Yes)",
+        "CholCheck": "Cholesterol Check (0 = No, 1 = Yes)",
+        "BMI": "Body Mass Index (e.g., 25.5)",
+        "Smoker": "Smoker (0 = No, 1 = Yes)",
+        "Stroke": "Stroke (0 = No, 1 = Yes)",
+        "HeartDiseaseorAttack": "Heart Disease or Attack (0 = No, 1 = Yes)",
+        "PhysActivity": "Physical Activity (0 = No, 1 = Yes)",
+        "Fruits": "Consumes Fruits Regularly (0 = No, 1 = Yes)",
+        "Veggies": "Consumes Vegetables Regularly (0 = No, 1 = Yes)",
+        "HvyAlcoholConsump": "Heavy Alcohol Consumption (0 = No, 1 = Yes)",
+        "NoDocbcCost": "Could Not See Doctor Due to Cost (0 = No, 1 = Yes)",
+        "GenHlth": "General Health (1 = Excellent to 5 = Poor)",
+        "MentHlth": "Number of Days Mental Health Was Not Good (0-30)",
+        "PhysHlth": "Number of Days Physical Health Was Not Good (0-30)",
+        "DiffWalk": "Difficulty Walking (0 = No, 1 = Yes)",
+        "Sex": "Sex (0 = Female, 1 = Male)",
+        "Age": "Age (0 = 18-24, 1 = 25-29, ..., 12 = 80+)",
+        "Education": "Education Level (1 = No Schooling to 6 = College Graduate)",
+        "Income": "Income Level (1 = <10K to 8 = 75K+)",
+    }
+
+    prediction = None
+    if request.method == "POST":
+        # Collect user input from the form
+        user_input = {field: float(request.form[field]) for field in form_fields}
+
+        # Make prediction
+        prediction = predict_diabetes(user_input)
+
+    return render_template("predict.html", form_fields=form_fields, prediction=prediction)
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
