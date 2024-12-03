@@ -117,58 +117,13 @@
             margin-top: 20px;
             text-align: center;
         }
-          /* Loading spinner */
-          .loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            display: none; /* Hidden by default */
-        }
-
-        .spinner {
-            border: 8px solid #f3f3f3; /* Light gray */
-            border-top: 8px solid #3498db; /* Blue */
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .predict-button {
-        background-color: #007BFF;
-        color: white;
-        padding: 5px 10px;
-        text-decoration: none;
-        border-radius: 5px;
-        margin-left: 10px;
-        font-size: 14px;
-    }
-    .predict-button:hover {
-        background-color: #0056b3;
-    }
-
     </style>
 </head>
 <body>
-    <div class="loader">
-        <div class="spinner"></div>
-    </div>
-
     <div class="header">
         <h1>Diabetes Data Dashboard</h1>
         <div class="filter-container">
-            <form method="POST" id="filterForm">
+            <form method="POST">
                 <label for="sex_filter">Filter by Gender:</label>
                 <select name="sex_filter" id="sex_filter">
                     <option value="" {% if not sex_filter %}selected{% endif %}>All</option>
@@ -176,7 +131,6 @@
                     <option value="Female" {% if sex_filter == "Female" %}selected{% endif %}>Female</option>
                 </select>
                 <button type="submit">Apply</button>
-                <a href="{{ url_for('predict') }}" class="predict-button">Predict your diabetes</a>
             </form>
         </div>
     </div>
@@ -187,7 +141,6 @@
             <h2>Query 1: Average BMI</h2>
             <p>Calculate the average BMI of individuals with high cholesterol who have also suffered a heart attack or stroke.</p>
             <p><strong>Value:</strong> {{ average_bmi }}</p>
-            <img src="data:image/png;base64, {{ bmi_gauge_chart_url }}" alt="BMI Gauge Chart">
         </div>
 
         <!-- Query 2: Physical Activity Percentage -->
@@ -201,8 +154,8 @@
         <!-- Query 4: Income vs Healthcare Access -->
         <div class="chart-container">
             <h2>Query 4: Income vs Healthcare Access</h2>
-            <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income Chart">
-            <div class="chart-label">X-axis: Income Levels | Y-axis: Proportion of individuals unable to afford a doctor visit in the past 12 months </div>
+            <img src="data:image/png;base64,{{ income_chart_url }}" alt="Healthcare Access Chart">
+            <div class="chart-label">X-axis: Income Levels | Y-axis: Proportion of Individuals Unable to Afford Doctor Visits</div>
         </div>
 
         <!-- Query 5: Mental Health by Age -->
@@ -253,27 +206,5 @@
             <img src="data:image/png;base64,{{ smokers_vs_diabetes_chart }}" alt="Smoking vs Diabetes Chart">
         </div>
     </div>
-    <script>
-        // JavaScript to show the loader on form submission
-        const form = document.getElementById("filterForm");
-        const loader = document.querySelector(".loader");
-    
-        form.addEventListener("submit", function (event) {
-            event.preventDefault(); // Prevent immediate submission for loader visibility
-            console.log("Form submitted. Showing loader...");
-            loader.style.display = "flex"; // Show the loader
-    
-            // Delay the form submission to ensure the loader is visible
-            setTimeout(() => {
-                form.submit();
-            }, 200); // 200ms delay
-        });
-    
-        // Hide the loader after the page has loaded
-        window.addEventListener("load", function () {
-            console.log("Page loaded. Hiding loader...");
-            loader.style.display = "none"; // Hide the loader
-        });
-    </script>
 </body>
 </html>
