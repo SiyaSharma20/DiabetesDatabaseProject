@@ -97,6 +97,50 @@ def fetch_filtered_data(query):
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
+    
+# General Utility Function
+def fetch_filtered_data(query, gender_condition=""):
+    try:
+        db = mysql.connector.connect(
+            host="localhost",
+            port=3306,
+            user="root",
+            password="Arjun123!",
+            database="diabetes"
+        )
+        formatted_query = query.format(gender_condition=gender_condition)
+        result = pd.read_sql(formatted_query, db)
+        db.close()
+        return result
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+    
+# Render Bar Plot for Queries
+def generate_bar_plot(data, x_col, y_col, title, xlabel, ylabel, color, rotation=45):
+    img = io.BytesIO()
+    plt.figure(figsize=(8, 4))
+    bars = plt.bar(data[x_col], data[y_col], color=color)
+    plt.xlabel(xlabel, fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+    plt.title(title, fontsize=14)
+
+    # Set x-ticks to fixed values: 0, 1, 2
+    plt.xticks([0, 1, 2], fontsize=12)
+
+    for bar in bars:
+        plt.text(
+                bar.get_x() + bar.get_width() / 2,  # X position (center of the bar)
+                bar.get_height() / 2,  # Y position (middle of the bar)
+                f"{bar.get_height():.2f}%",  # Label text
+                ha='center', va='center', fontsize=15, color="black"  # Center alignment and white color for contrast
+            )
+    plt.tight_layout()
+    plt.savefig(img, format="png")
+    img.seek(0)
+    plt.close()
+    return base64.b64encode(img.getvalue()).decode("utf-8")
 
 @app.route("/", methods=["GET", "POST"])
 def display_graphs():
@@ -246,6 +290,66 @@ def display_graphs():
     mental_chart_url = base64.b64encode(img_mental.getvalue()).decode("utf-8")
     plt.close()
 
+    # Query 6: Physical Activity Percentage vs Diabetes Status
+    physical_activity_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           (SUM(CASE WHEN Lifestyle.PhysActivity = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS PhysActivityPercentage
+    FROM Lifestyle
+    JOIN Diabetes_Status ON Lifestyle.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    physical_activity_data = fetch_filtered_data(physical_activity_query, gender_condition)
+    physical_activity_chart = generate_bar_plot(
+        physical_activity_data, "DiabetesStatus", "PhysActivityPercentage",
+        "Physical Activity Percentage vs Diabetes Status", "Diabetes Status", "Physical Activity Percentage", "#76C7C0"
+    )
+
+    # Query 7: Healthcare Access vs Diabetes Status
+    healthcare_access_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           AVG(Medical_and_Wellbeing.NoDoctor) AS AvgNoDoctorAccess
+    FROM Medical_and_Wellbeing
+    JOIN Diabetes_Status ON Medical_and_Wellbeing.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    healthcare_access_data = fetch_filtered_data(healthcare_access_query, gender_condition)
+    healthcare_access_chart = generate_bar_plot(
+        healthcare_access_data, "DiabetesStatus", "AvgNoDoctorAccess",
+        "Healthcare Access vs Diabetes Status", "Diabetes Status", "Average Unable to See Doctor", "#FFA07A"
+    )
+
+    # Query 8: Mental Health vs Diabetes Status
+    mental_health_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           AVG(Medical_and_Wellbeing.MentHlth) AS AvgMentalHealthDays
+    FROM Medical_and_Wellbeing
+    JOIN Diabetes_Status ON Medical_and_Wellbeing.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    mental_health_data = fetch_filtered_data(mental_health_query, gender_condition)
+    mental_health_chart = generate_bar_plot(
+        mental_health_data, "DiabetesStatus", "AvgMentalHealthDays",
+        "Mental Health vs Diabetes Status", "Diabetes Status", "Average Mental Health Days", "#87CEEB"
+    )
+
+    # Query 9: Smokers vs Diabetes Status
+    smokers_vs_diabetes_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           (SUM(CASE WHEN Lifestyle.Smoker = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS SmokingPercentage
+    FROM Lifestyle
+    JOIN Diabetes_Status ON Lifestyle.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    smokers_vs_diabetes_data = fetch_filtered_data(smokers_vs_diabetes_query, gender_condition)
+    smokers_vs_diabetes_chart = generate_bar_plot(
+        smokers_vs_diabetes_data, "DiabetesStatus", "SmokingPercentage",
+        "Smoking Percentage vs Diabetes Status", "Diabetes Status", "Smoking Percentage", "#FF4500"
+    )
+
     return render_template(
         "graphs.html",
         average_bmi=average_bmi,
@@ -256,7 +360,13 @@ def display_graphs():
         mental_chart_url=mental_chart_url,
         physical_activity_chart_url=physical_activity_chart_url,
         zip=zip,
+        # added queries
+        physical_activity_chart=physical_activity_chart,
+        healthcare_access_chart=healthcare_access_chart,
+        mental_health_chart=mental_health_chart,
+        smokers_vs_diabetes_chart=smokers_vs_diabetes_chart,
         sex_filter=sex_filter
+
     )
 
 if __name__ == "__main__":

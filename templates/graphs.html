@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+            background-color: #f9f9fc;
         }
         .header {
             background-color: #333;
@@ -29,6 +29,7 @@
         }
         .filter-container label {
             margin-right: 10px;
+            font-size: 14px;
         }
         .filter-container select, .filter-container button {
             padding: 5px 10px;
@@ -60,12 +61,12 @@
         .chart-container img {
             max-width: 100%;
             height: auto;
-            margin-bottom: 10px;
+            margin: 10px 0;
         }
         .chart-label {
             font-size: 12px;
             color: #555;
-            margin: 5px 0 0;
+            margin-top: 10px;
         }
         .query-3-container {
             grid-column: span 4;
@@ -78,7 +79,7 @@
         .query-3-container h2 {
             font-size: 20px;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         .query-3-grid {
             display: grid;
@@ -90,7 +91,7 @@
             text-align: center;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 10px;
+            padding: 15px;
             background-color: #f9f9f9;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -107,6 +108,7 @@
         .query-3-card p {
             font-size: 14px;
             color: #666;
+            margin-bottom: 5px;
         }
         .query-3-container p1 {
             display: block;
@@ -125,8 +127,8 @@
                 <label for="sex_filter">Filter by Gender:</label>
                 <select name="sex_filter" id="sex_filter">
                     <option value="" {% if not sex_filter %}selected{% endif %}>All</option>
-                    <option value="Male" {% if sex_filter=="Male" %}selected{% endif %}>Male</option>
-                    <option value="Female" {% if sex_filter=="Female" %}selected{% endif %}>Female</option>
+                    <option value="Male" {% if sex_filter == "Male" %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if sex_filter == "Female" %}selected{% endif %}>Female</option>
                 </select>
                 <button type="submit">Apply</button>
             </form>
@@ -134,51 +136,71 @@
     </div>
 
     <div class="container">
+        <!-- Query 1: Average BMI -->
         <div class="chart-container">
             <h2>Query 1: Average BMI</h2>
             <p>Calculate the average BMI of individuals with high cholesterol who have also suffered a heart attack or stroke.</p>
             <p><strong>Value:</strong> {{ average_bmi }}</p>
         </div>
 
+        <!-- Query 2: Physical Activity Percentage -->
         <div class="chart-container">
             <h2>Query 2: Physical Activity Percentage</h2>
             <p>Determine the percentage of individuals with diabetes who engage in regular physical activity.</p>
             <p><strong>Percentage:</strong> {{ physical_activity_percentage }}%</p>
-            <img src="data:image/png;base64, {{ physical_activity_chart_url }}" alt="Physical Activity by Age Chart">
+            <img src="data:image/png;base64,{{ physical_activity_chart_url }}" alt="Physical Activity Chart">
         </div>
 
+        <!-- Query 4: Income vs Healthcare Access -->
         <div class="chart-container">
             <h2>Query 4: Income vs Healthcare Access</h2>
-            <img src="data:image/png;base64, {{ income_chart_url }}" alt="Income Chart">
+            <img src="data:image/png;base64,{{ income_chart_url }}" alt="Healthcare Access Chart">
             <div class="chart-label">X-axis: Income Levels | Y-axis: Proportion of Individuals Unable to Afford Doctor Visits</div>
         </div>
 
+        <!-- Query 5: Mental Health by Age -->
         <div class="chart-container">
             <h2>Query 5: Mental Health by Age</h2>
-            <img src="data:image/png;base64, {{ mental_chart_url }}" alt="Mental Health Chart">
-            <div class="chart-label">X-axis: Age | Y-axis: Number of days mental health was not good in the past 30 days </div>
+            <img src="data:image/png;base64,{{ mental_chart_url }}" alt="Mental Health Chart">
+            <div class="chart-label">X-axis: Age | Y-axis: Number of Days Mental Health Was Not Good</div>
         </div>
+    </div>
 
-        <!-- Query 3 -->
-        <div class="query-3-container">
-            <h2>Query 3: Proportion of Smokers vs Non-Smokers by Education Level</h2>
-            <div class="query-3-grid">
-                {% for chart, count in zip(charts, counts) %}
-                <div class="query-3-card">
-                    <h3>Education Level {{ count.education_level }}</h3>
-                    <img src="data:image/png;base64, {{ chart }}" alt="Education Smoking Chart">
-                    <p>
-                        Non-Smokers: {{ count.non_smoker_count }}
-                    </p>
-                    <p>
-                        Smokers: {{ count.smoker_count }}
-                    </p>
-                </div>
-                {% endfor %}
+    <!-- Query 3: Proportion of Smokers vs Non-Smokers by Education Level -->
+    <div class="query-3-container">
+        <h2>Query 3: Proportion of Smokers vs Non-Smokers by Education Level</h2>
+        <div class="query-3-grid">
+            {% for chart, count in zip(charts, counts) %}
+            <div class="query-3-card">
+                <h3>Education Level {{ count.education_level }}</h3>
+                <img src="data:image/png;base64,{{ chart }}" alt="Smokers vs Non-Smokers Chart">
+                <p>Non-Smokers: {{ count.non_smoker_count }}</p>
+                <p>Smokers: {{ count.smoker_count }}</p>
             </div>
-            <p1>
-                'SMOKER' = Have you smoked at least 100 cigarettes in your entire life? [Note: 5 packs = 100 cigarettes] 0 = no 1 = yes
-            </p1>
+            {% endfor %}
+        </div>
+        <p1>
+            <strong>Note:</strong> 'Smoker' = Have you smoked at least 100 cigarettes in your entire life? [5 packs = 100 cigarettes]
+        </p1>
+    </div>
+
+    <!-- Additional Queries -->
+    <div class="container">
+        <div class="chart-container">
+            <h2>Physical Activity Percentage vs Diabetes Status</h2>
+            <img src="data:image/png;base64,{{ physical_activity_chart }}" alt="Physical Activity vs Diabetes Chart">
+        </div>
+        <div class="chart-container">
+            <h2>Healthcare Access vs Diabetes Status</h2>
+            <img src="data:image/png;base64,{{ healthcare_access_chart }}" alt="Healthcare Access vs Diabetes Chart">
+        </div>
+        <div class="chart-container">
+            <h2>Mental Health vs Diabetes Status</h2>
+            <img src="data:image/png;base64,{{ mental_health_chart }}" alt="Mental Health vs Diabetes Chart">
+        </div>
+        <div class="chart-container">
+            <h2>Smoking Percentage vs Diabetes Status</h2>
+            <img src="data:image/png;base64,{{ smokers_vs_diabetes_chart }}" alt="Smoking vs Diabetes Chart">
         </div>
     </div>
 </body>
