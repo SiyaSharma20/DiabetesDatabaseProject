@@ -80,7 +80,38 @@ def predict_diabetes(user_input):
     predicted_class = np.argmax(predicted_probabilities.values[0])
     return ["No Diabetes", "Pre-Diabetes", "Diabetes"][predicted_class]
 
-
+def map_age_to_category(age):
+    """
+    Map actual age to the corresponding age category for the model.
+    """
+    if age < 18:
+        raise ValueError("Age must be 18 or older.")
+    if 18 <= age <= 24:
+        return 0
+    elif 25 <= age <= 29:
+        return 1
+    elif 30 <= age <= 34:
+        return 2
+    elif 35 <= age <= 39:
+        return 3
+    elif 40 <= age <= 44:
+        return 4
+    elif 45 <= age <= 49:
+        return 5
+    elif 50 <= age <= 54:
+        return 6
+    elif 55 <= age <= 59:
+        return 7
+    elif 60 <= age <= 64:
+        return 8
+    elif 65 <= age <= 69:
+        return 9
+    elif 70 <= age <= 74:
+        return 10
+    elif 75 <= age <= 79:
+        return 11
+    else:  # 80+
+        return 12
 
 
 # Query 1: Average BMI
@@ -448,26 +479,26 @@ def dashboard():
 def predict():
     # Define the form fields and their labels
     form_fields = {
-        "HighBP": "High Blood Pressure (0 = No, 1 = Yes)",
-        "HighChol": "High Cholesterol (0 = No, 1 = Yes)",
-        "CholCheck": "Cholesterol Check (0 = No, 1 = Yes)",
-        "BMI": "Body Mass Index (e.g., 25.5)",
-        "Smoker": "Smoker (0 = No, 1 = Yes)",
-        "Stroke": "Stroke (0 = No, 1 = Yes)",
-        "HeartDiseaseorAttack": "Heart Disease or Attack (0 = No, 1 = Yes)",
-        "PhysActivity": "Physical Activity (0 = No, 1 = Yes)",
-        "Fruits": "Consumes Fruits Regularly (0 = No, 1 = Yes)",
-        "Veggies": "Consumes Vegetables Regularly (0 = No, 1 = Yes)",
-        "HvyAlcoholConsump": "Heavy Alcohol Consumption (0 = No, 1 = Yes)",
-        "NoDocbcCost": "Could Not See Doctor Due to Cost (0 = No, 1 = Yes)",
-        "GenHlth": "General Health (1 = Excellent to 5 = Poor)",
-        "MentHlth": "Number of Days Mental Health Was Not Good (0-30)",
-        "PhysHlth": "Number of Days Physical Health Was Not Good (0-30)",
-        "DiffWalk": "Difficulty Walking (0 = No, 1 = Yes)",
-        "Sex": "Sex (0 = Female, 1 = Male)",
-        "Age": "Age (0 = 18-24, 1 = 25-29, ..., 12 = 80+)",
-        "Education": "Education Level (1 = No Schooling to 6 = College Graduate)",
-        "Income": "Income Level (1 = <10K to 8 = 75K+)",
+        "HighBP": "Do You Have High Blood Pressure? (0 = No, 1 = Yes)",
+        "HighChol": "Do You Have High Cholesterol? (0 = No, 1 = Yes)",
+        "CholCheck": "Have You Had a Cholesterol Check in the Past 5 Years? (0 = No, 1 = Yes)",
+        "BMI": "What is Your Body Mass Index? (e.g., 25.5)",
+        "Smoker": "Are You a Smoker? (0 = No, 1 = Yes)",
+        "Stroke": "Have You Had a Stroke? (0 = No, 1 = Yes)",
+        "HeartDiseaseorAttack": "Have You Had Heart Disease or Attack? (0 = No, 1 = Yes)",
+        "PhysActivity": "Have You Been Physically Active in the Past 30 Days? (0 = No, 1 = Yes)",
+        "Fruits": "Do You Consume Fruits Regularly (1 or more times a day)? (0 = No, 1 = Yes)",
+        "Veggies": "Do You Consume Vegetables Regularly (1 or more times a day)? (0 = No, 1 = Yes)",
+        "HvyAlcoholConsump": "Heavy Alcohol Consumption? (Heavy drinkers are men having more than 14 drinks per week and women having more than 7 drinks per week. 0 = No, 1 = Yes)",
+        "NoDocbcCost": "Have You Not Been Able to See a Doctor in the Past 12 Months Due to Cost? (0 = No, 1 = Yes)",
+        "GenHlth": "How Would You Rate Your General Health? (1 = Excellent to 5 = Poor)",
+        "MentHlth": "How Many Days in the Past 30 Days Was Your Mental Health Not Good (0-30)",
+        "PhysHlth": "How Many Days in the Past 30 Days Was Your Physical Health Not Good (0-30)",
+        "DiffWalk": "Do You Have Difficulty Walking? (0 = No, 1 = Yes)",
+        "Sex": "What is Your Sex? (0 = Female, 1 = Male)",
+        "Age": "What is Your Age? (enter your age in years, please enter age >= 18)",
+        "Education": "What is Your Highest Education Level? (1 = No Schooling, 2 = Grades 1-8, 3 = Some High School, 4 = High School Graduate, 5 = Some College, 6 = College Graduate)",
+        "Income": "What is Your Income Level? (1 = <10K, 2 = 10K-15K, 3 = 15K-20K, 4 = 20K-25K, 5 = 25K-35K, 6 = 35K-50K, 7 = 50K-75K, 8 = 75K+)",
     }
 
     prediction = None
@@ -475,11 +506,13 @@ def predict():
         # Collect user input from the form
         user_input = {field: float(request.form[field]) for field in form_fields}
 
+        # Map the actual age to age category
+        user_input["Age"] = map_age_to_category(user_input["Age"])
+
         # Make prediction
         prediction = predict_diabetes(user_input)
 
     return render_template("predict.html", form_fields=form_fields, prediction=prediction)
-
 
 
 if __name__ == "__main__":
