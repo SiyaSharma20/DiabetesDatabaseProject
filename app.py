@@ -5,11 +5,83 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import matplotlib
+import plotly.graph_objects as go
+import math
+from matplotlib.ticker import FuncFormatter
+import statsmodels.api as sm
+import numpy as np
+
 
 # Use a non-GUI backend for Matplotlib
 matplotlib.use("Agg")
 
 app = Flask(__name__)
+
+# Database connection function
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="SiyaSharma1!",
+        database="diabetes"
+    )
+
+# Query data for the prediction model
+def fetch_data_for_model():
+    try:
+        db = get_db_connection()
+        
+        query = """
+        SELECT 
+            HighBP, HighChol, CholCheck, BMI, Smoker, Stroke,
+            HeartDisease AS HeartDiseaseorAttack, PhysActivity, Fruits, Veggies,
+            HighAlcoholConsumption AS HvyAlcoholConsump, 
+            NoDoctor AS NoDocbcCost, GenHlth,
+            MentHlth, PhysHlth, DiffWalk, Sex, Age, Education, Income, Status AS Diabetes_012
+        FROM Health_Status
+        JOIN Medical_and_Wellbeing ON Health_Status.Diabetes_ID = Medical_and_Wellbeing.Diabetes_ID
+        JOIN Lifestyle ON Health_Status.Diabetes_ID = Lifestyle.Diabetes_ID
+        JOIN Demographics ON Health_Status.Diabetes_ID = Demographics.Diabetes_ID
+        JOIN Diabetes_Status ON Health_Status.Diabetes_ID = Diabetes_Status.Diabetes_ID
+        """
+        data = pd.read_sql(query, db)
+        db.close()
+        return data
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+# Train the model once at the start of the application
+try:
+    diabetes_data = fetch_data_for_model()
+    if diabetes_data is None or diabetes_data.empty:
+        raise ValueError("Unable to fetch data from the database or database is empty.")
+    X = diabetes_data.drop(columns=["Diabetes_012"])
+    y = diabetes_data["Diabetes_012"]
+    X_const = sm.add_constant(X)
+    model = sm.MNLogit(y, X_const).fit()
+except Exception as e:
+    print(f"Error while training the model: {e}")
+    model = None
+
+# Predict the diabetes outcome
+def predict_diabetes(user_input):
+    if model is None:
+        return "Model is not available. Please check the database connection or training process."
+
+    # Prepare user input
+    user_input_df = pd.DataFrame([user_input])
+    user_input_const = sm.add_constant(user_input_df, has_constant='add')
+    
+    # Predict probabilities
+    predicted_probabilities = model.predict(user_input_const)
+    
+    # Classify the prediction
+    predicted_class = np.argmax(predicted_probabilities.values[0])
+    return ["No Diabetes", "Pre-Diabetes", "Diabetes"][predicted_class]
+
+
+
 
 # Query 1: Average BMI
 def query_average_bmi(gender_condition):
@@ -18,7 +90,7 @@ def query_average_bmi(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         query = f"""
@@ -39,6 +111,7 @@ def query_average_bmi(gender_condition):
         print(f"Error: {err}")
         return None
 
+
 # Query 2: Physical Activity Percentage
 def query_physical_activity_percentage(gender_condition):
     try:
@@ -46,7 +119,7 @@ def query_physical_activity_percentage(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         # Query for overall percentage
@@ -88,7 +161,7 @@ def fetch_filtered_data(query):
             host="localhost",
             port=3306,
             user="root",
-            password="Arjun123!",
+            password="SiyaSharma1!",
             database="diabetes"
         )
         result = pd.read_sql(query, db)
@@ -158,7 +231,8 @@ def display_graphs():
     # Query 1: Average BMI
     average_bmi = query_average_bmi(gender_condition)
     average_bmi = round(average_bmi, 2) if average_bmi else "No data available"
-
+    #new for query 1 gauge chart
+    #bmi_gauge_chart_url = generate_bmi_gauge(average_bmi) if average_bmi else None
     
 
     # Query 2: Physical Activity Percentage
@@ -212,6 +286,15 @@ def display_graphs():
     education_smoking_data = fetch_filtered_data(query_education_smoking)
     pivoted_data = education_smoking_data.pivot_table(index="Education", columns="Smoker", values="Count", fill_value=0)
 
+    EDUCATION_LEVELS = {
+    1: "No Schooling",
+    2: "Grades 1-8",
+    3: "Grades 9-11",
+    4: "High School Graduate",
+    5: "Some College",
+    6: "College Graduate"
+}
+
     charts = []
     counts = []
     for education_level, row in pivoted_data.iterrows():
@@ -237,14 +320,26 @@ def display_graphs():
         buffer.seek(0)
         charts.append(base64.b64encode(buffer.getvalue()).decode("utf-8"))
         plt.close()
+
         counts.append({
-            "education_level": int(education_level),
+            "education_level": EDUCATION_LEVELS.get(int(education_level), "Unknown"),
             "non_smoker_count": int(row[0]),
             "smoker_count": int(row[1]),
         })
 
 
     # Query 4: Income vs Healthcare Access
+    INCOME_LEVELS = {
+    1: "< 10K",
+    2: "10K-15K",
+    3: "15K-20K",
+    4: "20K-25K",
+    5: "25K-35K",
+    6: "35K-50K",
+    7: "50K-75K",
+    8: "75K+"
+    }
+    
     query_income_healthcare_access = f"""
     SELECT Demographics.Income, AVG(Medical_and_Wellbeing.NoDoctor) AS Avg_No_Doctor
     FROM Demographics
@@ -257,9 +352,30 @@ def display_graphs():
 
     img_income = io.BytesIO()
     plt.figure(figsize=(6, 3))
-    bars = plt.bar(income_healthcare_data["Income"], income_healthcare_data["Avg_No_Doctor"], color="coral")
+    
+    # Replace integer income levels with descriptive labels for plotting
+    income_labels = [INCOME_LEVELS.get(income, "Unknown") for income in income_healthcare_data["Income"]]
+
+    # Convert the average values to percentages by multiplying by 100
+    income_healthcare_data["Avg_No_Doctor"] *= 100  
+    bars = plt.bar(income_labels, income_healthcare_data["Avg_No_Doctor"], color="coral")
     for bar in bars:
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.02, f"{bar.get_height():.2f}", ha="center")
+        value = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + 0.1,  # Position slightly above the bar
+            f"{value:.2f}%",
+            ha="center",
+            fontsize=9
+        )
+
+    # Add % sign to the Y-axis
+    def to_percent(y, _):
+        return f"{y:.0f}%"
+
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(to_percent))
+
+    plt.xticks(rotation=45, ha='right', fontsize=10)
     plt.title("Impact of Income on Healthcare Access")
     plt.tight_layout()
     plt.savefig(img_income, format="png")
