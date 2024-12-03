@@ -5,12 +5,6 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import matplotlib
-import plotly.graph_objects as go
-import math
-from matplotlib.ticker import FuncFormatter
-import statsmodels.api as sm
-import numpy as np
-
 
 # Use a non-GUI backend for Matplotlib
 matplotlib.use("Agg")
@@ -121,7 +115,7 @@ def query_average_bmi(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="SiyaSharma1!",
+            password="Arjun123!",
             database="diabetes"
         )
         query = f"""
@@ -142,7 +136,6 @@ def query_average_bmi(gender_condition):
         print(f"Error: {err}")
         return None
 
-
 # Query 2: Physical Activity Percentage
 def query_physical_activity_percentage(gender_condition):
     try:
@@ -150,7 +143,7 @@ def query_physical_activity_percentage(gender_condition):
             host="localhost",
             port=3306,
             user="root",
-            password="SiyaSharma1!",
+            password="Arjun123!",
             database="diabetes"
         )
         # Query for overall percentage
@@ -192,7 +185,7 @@ def fetch_filtered_data(query):
             host="localhost",
             port=3306,
             user="root",
-            password="SiyaSharma1!",
+            password="Arjun123!",
             database="diabetes"
         )
         result = pd.read_sql(query, db)
@@ -201,68 +194,53 @@ def fetch_filtered_data(query):
     except mysql.connector.Error as err:
         print(f"Error: {err}")
         return None
-
-
-def generate_bmi_gauge(average_bmi):
-    if average_bmi is None:
+    
+# General Utility Function
+def fetch_filtered_data(query, gender_condition=""):
+    try:
+        db = mysql.connector.connect(
+            host="localhost",
+            port=3306,
+            user="root",
+            password="Arjun123!",
+            database="diabetes"
+        )
+        formatted_query = query.format(gender_condition=gender_condition)
+        result = pd.read_sql(formatted_query, db)
+        db.close()
+        return result
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
         return None
 
-    # Determine the BMI category based on the value
-    if average_bmi < 18.5:
-        category = "Underweight"
-    elif 18.5 <= average_bmi <= 24.9:
-        category = "Healthy"
-    elif 25 <= average_bmi <= 29.9:
-        category = "Overweight"
-    else:
-        category = "Obese"
+    
+# Render Bar Plot for Queries
+def generate_bar_plot(data, x_col, y_col, title, xlabel, ylabel, color, rotation=45, multiply_y_by_100=False):
+    img = io.BytesIO()
+    plt.figure(figsize=(8, 4))
 
-    # Create the gauge chart
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=average_bmi,
-        number={ "font": {"size": 80},
-        "valueformat" : ".2f",
-        },  # Large font for BMI value
-        title={"text": "Average BMI", "font": {"size": 24}},
-        gauge={
-            "axis": {"range": [10, 40], "tickwidth": 1, "tickcolor": "black"},
-            "bar": {"color": "#FF6347"},
-            "steps": [
-                {"range": [10, 18.5], "color": "#ADD8E6"},  # Underweight
-                {"range": [18.5, 24.9], "color": "#90EE90"},  # Healthy
-                {"range": [25, 29.9], "color": "#FFD700"},  # Overweight
-                {"range": [30, 40], "color": "#FF4500"},  # Obese
-            ],
-            "threshold": {
-                "line": {"color": "red", "width": 4},
-                "thickness": 0.75,
-                "value": average_bmi,
-            },
-        }
-    ))
+    # Apply multiplier for specific cases
+    y_values = data[y_col] * 100 if multiply_y_by_100 else data[y_col]
+    bars = plt.bar(data[x_col], y_values, color=color)
+    plt.xlabel(xlabel, fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+    plt.title(title, fontsize=14)
 
-    # Add text below the gauge, centered in the middle
-    fig.add_annotation(
-        text=f"<b>{category}</b>",  # Dynamic text (e.g., "Overweight")
-        x=0.5,  # Center horizontally
-        y=-0.05,  # Position below the gauge
-        xref="paper",
-        yref="paper",
-        showarrow=False,
-        font=dict(size=24, color="gray"),  # Customize font size and color
-        align="center"
-    )
+    # Set x-ticks to fixed values: 0, 1, 2
+    plt.xticks([0, 1, 2], fontsize=12)
 
-    # Save the chart as a PNG image in memory
-    img_bmi = io.BytesIO()
-    fig.write_image(img_bmi, format="png", engine="kaleido")
-    img_bmi.seek(0)
-
-    # Encode the image in base64
-    return base64.b64encode(img_bmi.getvalue()).decode("utf-8")
-    #new stuff ends here
-
+    for bar in bars:
+        plt.text(
+                bar.get_x() + bar.get_width() / 2,  # X position (center of the bar)
+                bar.get_height() / 2,  # Y position (middle of the bar)
+                f"{bar.get_height():.2f}%",  # Label text
+                ha='center', va='center', fontsize=15, color="black"  # Center alignment and white color for contrast
+            )
+    plt.tight_layout()
+    plt.savefig(img, format="png")
+    img.seek(0)
+    plt.close()
+    return base64.b64encode(img.getvalue()).decode("utf-8")
 
 @app.route("/", methods=["GET", "POST"])
 def display_graphs():
@@ -277,8 +255,7 @@ def display_graphs():
     # Query 1: Average BMI
     average_bmi = query_average_bmi(gender_condition)
     average_bmi = round(average_bmi, 2) if average_bmi else "No data available"
-    #new for query 1 gauge chart
-    bmi_gauge_chart_url = generate_bmi_gauge(average_bmi) if average_bmi else None
+
     
 
     # Query 2: Physical Activity Percentage
@@ -332,15 +309,6 @@ def display_graphs():
     education_smoking_data = fetch_filtered_data(query_education_smoking)
     pivoted_data = education_smoking_data.pivot_table(index="Education", columns="Smoker", values="Count", fill_value=0)
 
-    EDUCATION_LEVELS = {
-    1: "No Schooling",
-    2: "Grades 1-8",
-    3: "Grades 9-11",
-    4: "High School Graduate",
-    5: "Some College",
-    6: "College Graduate"
-}
-
     charts = []
     counts = []
     for education_level, row in pivoted_data.iterrows():
@@ -366,26 +334,14 @@ def display_graphs():
         buffer.seek(0)
         charts.append(base64.b64encode(buffer.getvalue()).decode("utf-8"))
         plt.close()
-
         counts.append({
-            "education_level": EDUCATION_LEVELS.get(int(education_level), "Unknown"),
+            "education_level": int(education_level),
             "non_smoker_count": int(row[0]),
             "smoker_count": int(row[1]),
         })
 
 
     # Query 4: Income vs Healthcare Access
-    INCOME_LEVELS = {
-    1: "< 10K",
-    2: "10K-15K",
-    3: "15K-20K",
-    4: "20K-25K",
-    5: "25K-35K",
-    6: "35K-50K",
-    7: "50K-75K",
-    8: "75K+"
-    }
-    
     query_income_healthcare_access = f"""
     SELECT Demographics.Income, AVG(Medical_and_Wellbeing.NoDoctor) AS Avg_No_Doctor
     FROM Demographics
@@ -398,30 +354,9 @@ def display_graphs():
 
     img_income = io.BytesIO()
     plt.figure(figsize=(6, 3))
-    
-    # Replace integer income levels with descriptive labels for plotting
-    income_labels = [INCOME_LEVELS.get(income, "Unknown") for income in income_healthcare_data["Income"]]
-
-    # Convert the average values to percentages by multiplying by 100
-    income_healthcare_data["Avg_No_Doctor"] *= 100  
-    bars = plt.bar(income_labels, income_healthcare_data["Avg_No_Doctor"], color="coral")
+    bars = plt.bar(income_healthcare_data["Income"], income_healthcare_data["Avg_No_Doctor"], color="coral")
     for bar in bars:
-        value = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width() / 2,
-            value + 0.1,  # Position slightly above the bar
-            f"{value:.2f}%",
-            ha="center",
-            fontsize=9
-        )
-
-    # Add % sign to the Y-axis
-    def to_percent(y, _):
-        return f"{y:.0f}%"
-
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(to_percent))
-
-    plt.xticks(rotation=45, ha='right', fontsize=10)
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 0.02, f"{bar.get_height():.2f}", ha="center")
     plt.title("Impact of Income on Healthcare Access")
     plt.tight_layout()
     plt.savefig(img_income, format="png")
@@ -455,6 +390,67 @@ def display_graphs():
     mental_chart_url = base64.b64encode(img_mental.getvalue()).decode("utf-8")
     plt.close()
 
+    # Query 6: Physical Activity Percentage vs Diabetes Status
+    physical_activity_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           (SUM(CASE WHEN Lifestyle.PhysActivity = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS PhysActivityPercentage
+    FROM Lifestyle
+    JOIN Diabetes_Status ON Lifestyle.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    physical_activity_data = fetch_filtered_data(physical_activity_query, gender_condition)
+    physical_activity_chart = generate_bar_plot(
+        physical_activity_data, "DiabetesStatus", "PhysActivityPercentage",
+        "Physical Activity Percentage vs Diabetes Status", "Diabetes Status", "Physical Activity Percentage", "#76C7C0"
+    )
+
+    # Query 7: Healthcare Access vs Diabetes Status
+    healthcare_access_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           AVG(Medical_and_Wellbeing.NoDoctor) AS AvgNoDoctorAccess
+    FROM Medical_and_Wellbeing
+    JOIN Diabetes_Status ON Medical_and_Wellbeing.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    healthcare_access_data = fetch_filtered_data(healthcare_access_query, gender_condition)
+    healthcare_access_chart = generate_bar_plot(
+        healthcare_access_data, "DiabetesStatus", "AvgNoDoctorAccess",
+        "Healthcare Access vs Diabetes Status", "Diabetes Status", "Average Unable to See Doctor", "#FFA07A",
+        multiply_y_by_100 = True 
+    )
+
+    # Query 8: Mental Health vs Diabetes Status
+    mental_health_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           AVG(Medical_and_Wellbeing.MentHlth) AS AvgMentalHealthDays
+    FROM Medical_and_Wellbeing
+    JOIN Diabetes_Status ON Medical_and_Wellbeing.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    mental_health_data = fetch_filtered_data(mental_health_query, gender_condition)
+    mental_health_chart = generate_bar_plot(
+        mental_health_data, "DiabetesStatus", "AvgMentalHealthDays",
+        "Mental Health vs Diabetes Status", "Diabetes Status", "Average Mental Health Days", "#87CEEB"
+    )
+
+    # Query 9: Smokers vs Diabetes Status
+    smokers_vs_diabetes_query = """
+    SELECT Diabetes_Status.Status AS DiabetesStatus,
+           (SUM(CASE WHEN Lifestyle.Smoker = 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS SmokingPercentage
+    FROM Lifestyle
+    JOIN Diabetes_Status ON Lifestyle.Diabetes_ID = Diabetes_Status.Diabetes_ID
+    WHERE 1=1 {gender_condition}
+    GROUP BY Diabetes_Status.Status;
+    """
+    smokers_vs_diabetes_data = fetch_filtered_data(smokers_vs_diabetes_query, gender_condition)
+    smokers_vs_diabetes_chart = generate_bar_plot(
+        smokers_vs_diabetes_data, "DiabetesStatus", "SmokingPercentage",
+        "Smoking Percentage vs Diabetes Status", "Diabetes Status", "Smoking Percentage", "#FF4500"
+    )
+
     return render_template(
         "graphs.html",
         average_bmi=average_bmi,
@@ -465,8 +461,12 @@ def display_graphs():
         mental_chart_url=mental_chart_url,
         physical_activity_chart_url=physical_activity_chart_url,
         zip=zip,
-        sex_filter=sex_filter,
-        bmi_gauge_chart_url=bmi_gauge_chart_url,
+        # added queries
+        physical_activity_chart=physical_activity_chart,
+        healthcare_access_chart=healthcare_access_chart,
+        mental_health_chart=mental_health_chart,
+        smokers_vs_diabetes_chart=smokers_vs_diabetes_chart,
+        sex_filter=sex_filter
 
     )
 
